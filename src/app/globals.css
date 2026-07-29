@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm paper cream, not clinical white. */
+    --background: 42 50% 97%;
+    --foreground: 145 25% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 145 25% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 145 25% 12%;
+
+    /* Deep Newton forest green. */
+    --primary: 134 33% 27%;
+    --primary-foreground: 42 50% 97%;
+
+    /* Soft sage for chips and quiet surfaces. */
+    --secondary: 130 20% 92%;
+    --secondary-foreground: 140 30% 20%;
+
+    --muted: 40 25% 93%;
+    --muted-foreground: 140 10% 40%;
+
+    /* Muted maple — used sparingly for seasonal/CTA accents. */
+    --accent: 20 71% 44%;
+    --accent-foreground: 42 50% 97%;
+
+    --destructive: 0 65% 44%;
+    --destructive-foreground: 42 50% 97%;
+
+    --border: 40 20% 87%;
+    --input: 40 20% 87%;
+    --ring: 134 33% 27%;
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 145 25% 8%;
+    --foreground: 42 30% 94%;
+
+    --card: 145 22% 11%;
+    --card-foreground: 42 30% 94%;
+
+    --popover: 145 22% 11%;
+    --popover-foreground: 42 30% 94%;
+
+    --primary: 134 30% 60%;
+    --primary-foreground: 145 30% 10%;
+
+    --secondary: 145 15% 18%;
+    --secondary-foreground: 42 30% 94%;
+
+    --muted: 145 15% 16%;
+    --muted-foreground: 140 8% 65%;
+
+    --accent: 20 65% 55%;
+    --accent-foreground: 145 30% 10%;
+
+    --destructive: 0 60% 50%;
+    --destructive-foreground: 42 30% 94%;
+
+    --border: 145 12% 22%;
+    --input: 145 12% 22%;
+    --ring: 134 30% 60%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  /* Headings lean on the display serif for the New England editorial feel. */
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+}
+
+@layer utilities {
+  /* Horizontal snap rail used by the featured carousel. */
+  .snap-rail {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .snap-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Subtle topographic wash behind the hero. */
+  .hero-wash {
+    background-image:
+      radial-gradient(ellipse 70% 55% at 12% 0%, hsl(134 33% 27% / 0.14), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 92% 8%, hsl(20 71% 44% / 0.12), transparent 62%);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
