@@ -84,6 +84,26 @@
   h3 {
     @apply font-display tracking-tight;
   }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* One blanket rule for the whole page rather than chasing every transition
+     class individually — anyone with the OS-level "reduce motion" flag set
+     gets an effectively static site. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 }
 
 @layer utilities {
@@ -96,7 +116,7 @@
     display: none;
   }
 
-  /* Subtle topographic wash behind the hero. */
+  /* Subtle topographic wash layered over the hero photo. */
   .hero-wash {
     background-image:
       radial-gradient(ellipse 70% 55% at 12% 0%, hsl(134 33% 27% / 0.14), transparent 60%),
@@ -105,5 +125,10 @@
 
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Slow, near-imperceptible drift on the hero photo — atmosphere, not motion. */
+  .animate-hero-pan {
+    animation: hero-pan 22s ease-in-out infinite alternate;
   }
 }

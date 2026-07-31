@@ -2,16 +2,17 @@ import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 import { VILLAGES } from '@/lib/data/villages';
 import { ActivityImage } from '@/components/activity-image';
+import { Reveal } from '@/components/reveal';
 
 /** The 13-village quick-links grid. Two-up on phones, up to four-up on desktop. */
 export function VillageGrid({ counts = {} }: { counts?: Record<string, number> }) {
   return (
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-      {VILLAGES.map((village) => (
-        <li key={village.slug}>
+      {VILLAGES.map((village, i) => (
+        <Reveal key={village.slug} as="li" delay={Math.min(i * 40, 360)}>
           <Link
             href={`/villages/${village.slug}`}
-            className="group relative flex h-32 flex-col justify-end overflow-hidden rounded-lg border border-border shadow-soft transition-shadow hover:shadow-lifted sm:h-36"
+            className="group relative flex h-32 flex-col justify-end overflow-hidden rounded-lg border border-border shadow-soft transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lifted sm:h-36"
           >
             <ActivityImage
               src={village.imageUrl}
@@ -37,7 +38,7 @@ export function VillageGrid({ counts = {} }: { counts?: Record<string, number> }
               </p>
             </div>
           </Link>
-        </li>
+        </Reveal>
       ))}
     </ul>
   );

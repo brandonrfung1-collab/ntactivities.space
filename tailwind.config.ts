@@ -104,9 +104,14 @@ const config: Config = {
           from: { opacity: '0', transform: 'translateY(8px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        'hero-pan': {
+          from: { transform: 'scale(1.06) translate(0, 0)' },
+          to: { transform: 'scale(1.14) translate(-1%, -1.5%)' },
+        },
       },
       animation: {
         'fade-up': 'fade-up 0.4s ease-out both',
+        'hero-pan': 'hero-pan 22s ease-in-out infinite alternate',
       },
     },
   },

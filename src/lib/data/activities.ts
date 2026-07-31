@@ -21,7 +21,7 @@ import { VILLAGE_BY_SLUG } from '@/lib/data/villages';
  * verified photo in the `ACTIVITIES` mapper below — never a generic stock
  * image unrelated to the actual place.
  */
-const LANDMARK_IMAGES: Record<string, { url: string; credit: string; creditUrl: string }> = {
+export const LANDMARK_IMAGES: Record<string, { url: string; credit: string; creditUrl: string }> = {
   'auburndale-library': {
     url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Auburndale_Library%2C_Auburndale_MA.jpg/1920px-Auburndale_Library%2C_Auburndale_MA.jpg',
     credit: 'John Phelan / Wikimedia Commons, CC BY-SA 4.0',
