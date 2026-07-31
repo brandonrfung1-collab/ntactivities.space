@@ -18,9 +18,10 @@ npm run dev
 Open <http://localhost:3000>.
 
 **No credentials needed.** With no Supabase environment variables set, the app
-runs in **demo mode**: it serves the bundled seed dataset (65 activities across
-all 13 villages) and every page works. Accounts, favorites, reviews and the
-moderation queue show a friendly "needs Supabase" notice instead of erroring.
+runs in **demo mode**: it serves the bundled seed dataset (64 activities across
+all 13 villages, each pictured with a real, verified Wikimedia Commons photo)
+and every page works. Accounts, favorites, reviews and the moderation queue
+show a friendly "needs Supabase" notice instead of erroring.
 
 ---
 
@@ -160,7 +161,7 @@ vercel env pull .env.local
 - Page-view and save-count analytics on the admin dashboard
 - SEO: per-page metadata, OpenGraph, `sitemap.xml`, `robots.txt`, and schema.org
   `Event` / `Place` JSON-LD for rich results
-- 101 pages prerendered at build time; ISR revalidates hourly
+- 100 pages prerendered at build time; ISR revalidates hourly
 
 **Accessibility & performance**
 - Mobile-first throughout; filters work without JavaScript

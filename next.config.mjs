@@ -2,10 +2,12 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
-    // Sample/seed imagery is sourced from Unsplash. Add your Supabase Storage
-    // hostname here once you start uploading your own photos.
+    // Seed imagery is sourced from Wikimedia Commons (real, verified photos of
+    // Newton landmarks). Add your Supabase Storage hostname here once you
+    // start uploading your own photos.
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'upload.wikimedia.org' },
       { protocol: 'https', hostname: '*.supabase.co' },
     ],
   },

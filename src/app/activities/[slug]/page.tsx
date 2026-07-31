@@ -196,6 +196,16 @@ export default async function ActivityPage({ params }: { params: Promise<{ slug:
             sizes="100vw"
             priority
           />
+          {activity.imageCredit && (
+            <a
+              href={activity.imageCreditUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="absolute bottom-2 right-3 rounded bg-black/40 px-1.5 py-0.5 text-[10px] text-white/80 backdrop-blur-sm hover:text-white hover:underline"
+            >
+              Photo: {activity.imageCredit}
+            </a>
+          )}
         </div>
 
         <div className="mt-8 grid gap-10 lg:grid-cols-[1.6fr_1fr]">

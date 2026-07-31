@@ -22,6 +22,14 @@ export interface Village {
   lat: number;
   lng: number;
   imageUrl: string;
+  /**
+   * Attribution for `imageUrl` when it requires one (e.g. Wikimedia Commons
+   * CC BY / CC BY-SA). Absent for public-domain/CC0 photos or rows sourced
+   * from Supabase, where it simply isn't populated. UI-only — not part of the
+   * Supabase schema.
+   */
+  imageCredit?: string;
+  imageCreditUrl?: string;
   /** Trivia shown on the village page — gives the site local personality. */
   funFact: string;
 }
@@ -51,6 +59,9 @@ export interface Activity {
   lat: number;
   lng: number;
   imageUrl: string;
+  /** Attribution for `imageUrl` when required. See Village.imageCredit. */
+  imageCredit?: string;
+  imageCreditUrl?: string;
   priceType: PriceType;
   priceMin: number | null;
   priceMax: number | null;

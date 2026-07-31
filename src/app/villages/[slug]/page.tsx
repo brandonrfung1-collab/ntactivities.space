@@ -114,6 +114,16 @@ export default async function VillagePage({
               </p>
             </div>
           </div>
+          {village.imageCredit && (
+            <a
+              href={village.imageCreditUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="absolute bottom-2 right-3 text-[10px] text-cream-100/70 hover:text-cream-50 hover:underline"
+            >
+              Photo: {village.imageCredit}
+            </a>
+          )}
         </div>
       </section>
 

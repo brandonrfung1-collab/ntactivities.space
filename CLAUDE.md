@@ -136,19 +136,31 @@ When adding a table: enable RLS and write policies in the same migration.
 
 ## Seed data
 
-`src/lib/data/activities.ts` holds **65 activities — 5 per village**, across all
-8 categories. Landmarks are real Newton fixtures (Crystal Lake, Echo Bridge,
-Hemlock Gorge, Nahanton Park, Newton Community Farm, West Newton Cinema, the
-Nonantum Festa…). **Hours, prices and specific event times are illustrative
-sample data** meant to be replaced by real submissions.
+`src/lib/data/activities.ts` holds **64 activities — 5 per village, except
+Auburndale (4)**, across all 8 categories. Landmarks are real Newton fixtures
+(Crystal Lake, Echo Bridge, Hemlock Gorge, Nahanton Park, Newton Community
+Farm, West Newton Cinema, the Nonantum Festa…). **Hours, prices and specific
+event times are illustrative sample data** meant to be replaced by real
+submissions.
 
-Two things to know before editing:
+Three things to know before editing:
 
 1. Event timestamps use the `inDays(n, 'HH:MM')` helper, so they are generated
    **relative to today**. The demo never shows a calendar of past events. Do not
    hardcode absolute dates.
 2. Rows use the compact `Row` interface and are expanded into full `Activity`
    records at the bottom of the file. Add entries in the `ROWS` array.
+3. **Images are real, verified Wikimedia Commons photos, not stock imagery.**
+   A row naming a specific landmark that appears more than once (Echo Bridge,
+   Farlow Park, …) gets a `imageKey` into the `LANDMARK_IMAGES` map; every
+   other row falls back to its own village's verified photo
+   (`village.imageUrl`) in the `ACTIVITIES` mapper. Never wire in a stock
+   photo, and never reuse a landmark photo for a place it doesn't actually
+   depict — if no verified photo exists for a place (e.g. Thompsonville),
+   leave `imageUrl` empty and let `ActivityImage` show its gradient fallback
+   rather than guessing. Wikimedia photos usually require attribution: set
+   `imageCredit` / `imageCreditUrl` alongside `imageUrl` (see `villages.ts` for
+   the pattern) — CC0/public-domain photos can skip the credit.
 
 After editing, run `npm run seed` to regenerate `supabase/seed.sql`.
 
@@ -189,7 +201,7 @@ Private routes (`/admin`, `/favorites`, `/login`, `/signup`) set
 ## Rendering strategy
 
 - Static + `revalidate = 3600`: homepage, villages, categories, activity detail
-  (`generateStaticParams` prerenders all 65 + 13 + 8)
+  (`generateStaticParams` prerenders all 64 + 13 + 8)
 - `force-dynamic`: `/admin`, `/favorites` (per-user or must-be-live)
 - Dynamic on demand: `/activities` and other pages reading `searchParams`
 

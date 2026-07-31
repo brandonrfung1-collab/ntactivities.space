@@ -3,71 +3,95 @@ import { slugify } from '@/lib/utils';
 import { VILLAGE_BY_SLUG } from '@/lib/data/villages';
 
 /**
- * Sample dataset: 5 activities per village (65 total), spread across all eight
- * categories. Places and landmarks are real Newton fixtures; hours, prices and
- * event times are illustrative sample data meant to be replaced by real
- * submissions. See CLAUDE.md → "Seed data" before editing.
+ * Sample dataset: 64 activities across all eight categories (Auburndale has 4
+ * rather than 5 — a fifth row, "Norumbega Tower", was removed because that
+ * landmark is actually in Weston, MA, not Newton). Places and landmarks are
+ * real Newton fixtures; hours, prices and event times are illustrative sample
+ * data meant to be replaced by real submissions. See CLAUDE.md → "Seed data"
+ * before editing.
  *
  * Event timestamps are generated *relative to today* so the demo never shows a
  * calendar full of past events.
  */
 
-/** Stable pool of Unsplash photos keyed by category. */
-const IMAGES: Record<string, string[]> = {
-  'outdoors-parks': [
-    'photo-1441974231531-c6227db76b6e',
-    'photo-1470240731273-7821a6eeb6bd',
-    'photo-1501785888041-af3ef285b470',
-    'photo-1476231682828-37e571bc172f',
-    'photo-1500534623283-312aade485b7',
-  ],
-  'food-drink': [
-    'photo-1414235077428-338989a2e8c0',
-    'photo-1517248135467-4c7edcad34c4',
-    'photo-1504674900247-0877df9cc836',
-    'photo-1552566626-52f8b828add9',
-    'photo-1495474472287-4d71bcdd2085',
-  ],
-  'arts-culture': [
-    'photo-1499364615650-ec38552f4f34',
-    'photo-1503095396549-807759245b35',
-    'photo-1460661419201-fd4cecdf8a8b',
-    'photo-1470229722913-7c0e2dbbafd3',
-  ],
-  'family-kids': [
-    'photo-1503454537195-1dcabb73ffb9',
-    'photo-1444492696363-332accfd18e9',
-    'photo-1596461404969-9ae70f2830c1',
-    'photo-1560421683-6856ea585c78',
-  ],
-  nightlife: [
-    'photo-1470337458703-46ad1756a187',
-    'photo-1514362545857-3bc16c4c7d1b',
-    'photo-1543007630-9710e4a00a20',
-  ],
-  fitness: [
-    'photo-1517836357463-d25dfeac3438',
-    'photo-1571019613454-1cb2f99b2d8b',
-    'photo-1552674605-db6ffd4facb5',
-  ],
-  'seasonal-events': [
-    'photo-1508361001413-7a9dca21d08a',
-    'photo-1476718406336-bb5a9690ee2a',
-    'photo-1512389142860-9c449e58a543',
-    'photo-1543946602-a0fce8117697',
-  ],
-  shopping: [
-    'photo-1481437156560-3205f6a55735',
-    'photo-1441986300917-64674bd600d8',
-    'photo-1528698827591-e19ccd7bc23d',
-  ],
+/**
+ * Real, verified Wikimedia Commons photos of specific Newton landmarks that
+ * multiple rows below reference (e.g. Echo Bridge appears in three separate
+ * activities). Rows without a `imageKey` fall back to their village's own
+ * verified photo in the `ACTIVITIES` mapper below — never a generic stock
+ * image unrelated to the actual place.
+ */
+const LANDMARK_IMAGES: Record<string, { url: string; credit: string; creditUrl: string }> = {
+  'auburndale-library': {
+    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Auburndale_Library%2C_Auburndale_MA.jpg/1920px-Auburndale_Library%2C_Auburndale_MA.jpg',
+    credit: 'John Phelan / Wikimedia Commons, CC BY-SA 4.0',
+    creditUrl: 'https://commons.wikimedia.org/wiki/File:Auburndale_Library,_Auburndale_MA.jpg',
+  },
+  'chestnut-hill-street': {
+    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/The_Street%2C_Chestnut_Hill_MA.jpg/1920px-The_Street%2C_Chestnut_Hill_MA.jpg',
+    credit: 'John Phelan / Wikimedia Commons, CC BY-SA 4.0',
+    creditUrl: 'https://commons.wikimedia.org/wiki/File:The_Street,_Chestnut_Hill_MA.jpg',
+  },
+  'bc-gasson-hall': {
+    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Boston_College_Adlersaeule_Gasson_Hall_NW_9355_20190426.jpg/1920px-Boston_College_Adlersaeule_Gasson_Hall_NW_9355_20190426.jpg',
+    credit: 'Karlunun / Wikimedia Commons, CC BY-SA 4.0',
+    creditUrl:
+      'https://commons.wikimedia.org/wiki/File:Boston_College_Adlersaeule_Gasson_Hall_NW_9355_20190426.jpg',
+  },
+  'crystal-lake': {
+    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Crystal_Lake%2C_Newton_Centre_MA.jpg/1920px-Crystal_Lake%2C_Newton_Centre_MA.jpg',
+    credit: 'John Phelan / Wikimedia Commons, CC BY 3.0',
+    creditUrl: 'https://commons.wikimedia.org/wiki/File:Crystal_Lake,_Newton_Centre_MA.jpg',
+  },
+  'newton-free-library': {
+    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Newton_Free_Library_May_2026.jpg/1920px-Newton_Free_Library_May_2026.jpg',
+    credit: '4300streetcar / Wikimedia Commons, CC BY 4.0',
+    creditUrl: 'https://commons.wikimedia.org/wiki/File:Newton_Free_Library_May_2026.jpg',
+  },
+  'farlow-park': {
+    url: 'https://upload.wikimedia.org/wikipedia/commons/1/14/NewtonMA_FarlowPark.jpg',
+    credit: 'Magicpiano / Wikimedia Commons, CC BY-SA 4.0',
+    creditUrl: 'https://commons.wikimedia.org/wiki/File:NewtonMA_FarlowPark.jpg',
+  },
+  'echo-bridge': {
+    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/A_closer_view_of_the_Echo_Bridge%2C_Sudbury_Aqueduct.jpg/1920px-A_closer_view_of_the_Echo_Bridge%2C_Sudbury_Aqueduct.jpg',
+    credit: 'Bestbudbrian / Wikimedia Commons, CC BY-SA 4.0',
+    creditUrl:
+      'https://commons.wikimedia.org/wiki/File:A_closer_view_of_the_Echo_Bridge,_Sudbury_Aqueduct.jpg',
+  },
+  'lower-falls-mill': {
+    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Lower_Falls_Wine_Company%2C_Newton_Lower_Falls_MA.jpg/1920px-Lower_Falls_Wine_Company%2C_Newton_Lower_Falls_MA.jpg',
+    credit: 'John Phelan / Wikimedia Commons, CC BY-SA 3.0',
+    creditUrl:
+      'https://commons.wikimedia.org/wiki/File:Lower_Falls_Wine_Company,_Newton_Lower_Falls_MA.jpg',
+  },
+  'upper-falls-greenway': {
+    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/Upper_Falls_Greenway%2C_Newton_Upper_Falls_MA.jpg/1920px-Upper_Falls_Greenway%2C_Newton_Upper_Falls_MA.jpg',
+    credit: 'John Phelan / Wikimedia Commons, CC BY-SA 4.0',
+    creditUrl:
+      'https://commons.wikimedia.org/wiki/File:Upper_Falls_Greenway,_Newton_Upper_Falls_MA.jpg',
+  },
+  'upper-falls-mill': {
+    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Prospect_Block%2C_Newton_Upper_Falls_MA.jpg/1920px-Prospect_Block%2C_Newton_Upper_Falls_MA.jpg',
+    credit: 'John Phelan / Wikimedia Commons, CC BY-SA 4.0',
+    creditUrl: 'https://commons.wikimedia.org/wiki/File:Prospect_Block,_Newton_Upper_Falls_MA.jpg',
+  },
+  'cochituate-aqueduct': {
+    url: 'https://upload.wikimedia.org/wikipedia/commons/b/b7/CochituateAqueduct_WabanAvenueNewton.jpg',
+    credit: 'Magicpiano / Wikimedia Commons, CC BY-SA 4.0',
+    creditUrl: 'https://commons.wikimedia.org/wiki/File:CochituateAqueduct_WabanAvenueNewton.jpg',
+  },
+  'west-newton-cinema': {
+    url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/West_Newton_Cinema%2C_West_Newton_MA.jpg/1920px-West_Newton_Cinema%2C_West_Newton_MA.jpg',
+    credit: 'John Phelan / Wikimedia Commons, CC BY 4.0',
+    creditUrl: 'https://commons.wikimedia.org/wiki/File:West_Newton_Cinema,_West_Newton_MA.jpg',
+  },
+  'west-newton-hill': {
+    url: 'https://upload.wikimedia.org/wikipedia/commons/f/f3/NewtonMA_WestNewtonHillHD.jpg',
+    credit: 'Magicpiano / Wikimedia Commons, CC BY-SA 4.0',
+    creditUrl: 'https://commons.wikimedia.org/wiki/File:NewtonMA_WestNewtonHillHD.jpg',
+  },
 };
-
-function imageFor(categorySlug: string, index: number): string {
-  const pool = IMAGES[categorySlug] ?? IMAGES['outdoors-parks'];
-  const id = pool[index % pool.length];
-  return `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1200&q=70`;
-}
 
 /** ISO timestamp `n` days from today at the given Eastern-time wall clock. */
 function inDays(n: number, time = '10:00'): string {
@@ -89,6 +113,8 @@ interface Row {
   address: string;
   /** Offset from the village center, in degrees, so pins are not stacked. */
   offset?: [number, number];
+  /** Key into LANDMARK_IMAGES for a specific verified real-place photo. Falls back to the village's own verified photo when absent. */
+  imageKey?: string;
   price?: PriceType;
   priceMin?: number;
   priceMax?: number;
@@ -137,19 +163,6 @@ const ROWS: Row[] = [
     rating: [4.8, 214],
   },
   {
-    title: 'Norumbega Tower',
-    village: 'auburndale',
-    category: 'arts-culture',
-    summary:
-      'A stone tower built in 1889 to commemorate a Viking settlement that almost certainly never happened.',
-    description:
-      'Eben Norton Horsford was convinced that Norse explorers built a city on the Charles. He was wrong, but he built a 38-foot stone tower to mark the spot anyway, and it is still standing at the edge of the river.\n\nIt is a five-minute stop rather than an afternoon — park carefully on Norumbega Road, read the plaque, and continue on to the river path. A genuinely odd and wonderful piece of Newton history.',
-    address: 'Norumbega Road, Auburndale, MA 02466',
-    offset: [0.003, 0.001],
-    tags: ['history', 'hidden gem', 'quick stop', 'free'],
-    rating: [4.3, 41],
-  },
-  {
     title: 'Auburndale Library Story Hour',
     village: 'auburndale',
     category: 'family-kids',
@@ -159,6 +172,7 @@ const ROWS: Row[] = [
       'The Auburndale branch of the Newton Free Library runs a warm, unfussy story hour aimed at ages 1–4. Expect twenty minutes of books and songs, then free play and a chance for caregivers to compare notes.\n\nNo registration needed, but the room fills up — arrive five minutes early in winter. Free, like everything at the library.',
     address: '375 Auburn Street, Auburndale, MA 02466',
     offset: [-0.001, -0.003],
+    imageKey: 'auburndale-library',
     event: [3, '10:30', 1],
     recurrence: 'Every Wednesday, year-round',
     tags: ['toddlers', 'library', 'indoor', 'free'],
@@ -204,6 +218,7 @@ const ROWS: Row[] = [
       'The Street is where Chestnut Hill does an afternoon: a walkable outdoor block of clothing shops, home goods, a Showcase cinema, and a dozen restaurants with real outdoor seating.\n\nIt is unapologetically upscale, but the plaza is free to wander, there is a splash-and-play area for kids in summer, and parking is plentiful — a rarity in Newton.',
     address: '33 Boylston Street, Chestnut Hill, MA 02467',
     offset: [-0.003, -0.004],
+    imageKey: 'chestnut-hill-street',
     price: 'varies',
     recurrence: 'Daily, 10am–8pm (restaurants later)',
     tags: ['shopping', 'cinema', 'patio', 'rainy day'],
@@ -219,6 +234,7 @@ const ROWS: Row[] = [
       'You do not need to be a student to walk the BC campus. Start at the Linden Lane gates, take in Gasson Hall’s tower, and if the doors are open, step into Bapst Library’s Ford Tower reading room — stained glass, vaulted ceilings, absolute silence.\n\nCampus is prettiest in mid-October when the quad turns. Football Saturdays are electric but crowded; go on a weekday morning for the quiet version.',
     address: '140 Commonwealth Avenue, Chestnut Hill, MA 02467',
     offset: [0.001, -0.002],
+    imageKey: 'bc-gasson-hall',
     tags: ['architecture', 'walking', 'fall foliage', 'free'],
     rating: [4.7, 168],
   },
@@ -246,6 +262,7 @@ const ROWS: Row[] = [
       'A compact but well-curated market: five or six farms, a bread baker, a cheesemonger, and rotating prepared-food vendors. Live acoustic music from around ten.\n\nCome early for produce and late for the discounted end-of-day bread. SNAP/HIP accepted at the market tent.',
     address: 'Boylston Street Plaza, Chestnut Hill, MA 02467',
     offset: [-0.002, 0.001],
+    imageKey: 'chestnut-hill-street',
     event: [4, '09:00', 4],
     recurrence: 'Saturdays, June–October',
     price: 'varies',
@@ -264,6 +281,7 @@ const ROWS: Row[] = [
       'Crystal Lake is the city’s summer center of gravity. The bathhouse beach on Rogers Street has lifeguards, a roped swim area, a dock, and a grassy slope that fills with towels by noon on hot days.\n\nResident passes cover the season; day passes are available at the gate. Outside beach hours the perimeter path is open year-round and is a lovely twenty-minute loop, with ice-skating some winters when the ice is certified.',
     address: '10 Rogers Street, Newton Centre, MA 02459',
     offset: [-0.004, 0.001],
+    imageKey: 'crystal-lake',
     price: 'paid',
     priceMin: 10,
     priceMax: 10,
@@ -315,6 +333,7 @@ const ROWS: Row[] = [
       'The main library on Homer Street is a genuine civic anchor — a soaring atrium, an enormous children’s room with a dedicated program space, a teen room, and an upper floor of near-silent study carrels.\n\nDo not miss the museum pass program: free or steeply discounted admission to the MFA, the Museum of Science, the Aquarium and more, reservable online with a Newton card. There is also a small café and a gallery that rotates local artists monthly.',
     address: '330 Homer Street, Newton Centre, MA 02459',
     offset: [0.003, -0.002],
+    imageKey: 'newton-free-library',
     recurrence: 'Mon–Thu 9am–9pm, Fri–Sat 9am–5pm, Sun 1pm–5pm',
     tags: ['library', 'indoor', 'rainy day', 'museum passes', 'free'],
     rating: [4.9, 508],
@@ -346,6 +365,7 @@ const ROWS: Row[] = [
       'Farlow Park is a small 19th-century park with a duck pond, mature willows, and curving paths that were laid out when Newton Corner was the city’s fashionable address. It is an unexpectedly peaceful spot given how close the Mass Pike is.\n\nGood for a twenty-minute walk, a bench lunch, or letting small kids run. The surrounding streets have some of the best-preserved Victorian houses in the city.',
     address: 'Church Street at Park Street, Newton Corner, MA 02458',
     offset: [-0.001, 0.002],
+    imageKey: 'farlow-park',
     tags: ['pond', 'historic', 'quiet', 'stroller-friendly', 'free'],
     rating: [4.4, 67],
   },
@@ -389,6 +409,7 @@ const ROWS: Row[] = [
       'Starting at Farlow Park, this volunteer-led walk covers Newton Corner’s arc from 1630s settlement to railroad suburb to highway casualty — including the blocks lost to the Mass Pike in the 1960s.\n\nAbout a mile and a half at a conversational pace, with plenty of stops. Suggested donation supports the Newton History Museum at the Jackson Homestead.',
     address: 'Farlow Park, Church Street, Newton Corner, MA 02458',
     offset: [-0.0015, 0.0025],
+    imageKey: 'farlow-park',
     event: [6, '14:00', 1.5],
     recurrence: 'Second Saturday of the month, May–October',
     price: 'paid',
@@ -438,6 +459,7 @@ const ROWS: Row[] = [
       'Hemlock Gorge is Newton’s most dramatic landscape — the Charles narrows and drops through a rock cut, with old-growth hemlocks on the slopes above. Echo Bridge, an 1877 aqueduct arch, crosses the gorge, and a stairway leads down to a platform beneath it.\n\nStand on the platform and shout. The echo is genuinely startling and delights kids every time. Trails are short but rooty and steep in places; wear real shoes.',
     address: 'Ellis Street, Newton Highlands, MA 02461',
     offset: [-0.004, -0.003],
+    imageKey: 'echo-bridge',
     tags: ['hiking', 'echo bridge', 'gorge', 'hidden gem', 'free'],
     featured: true,
     rating: [4.8, 276],
@@ -543,6 +565,7 @@ const ROWS: Row[] = [
       'Lower Falls is unusually intact for a New England mill village: worker housing, the mill owner’s house, and St. Mary’s church all still stand within a few blocks of the dam that started it all.\n\nDownload the self-guided map from the Newton History Museum site, or just wander — the interpretive signs along Concord Street cover the essentials. About forty-five minutes.',
     address: 'Concord Street, Newton Lower Falls, MA 02462',
     offset: [0.0015, -0.0025],
+    imageKey: 'lower-falls-mill',
     tags: ['self-guided', 'history', 'architecture', 'free'],
     rating: [4.2, 33],
   },
@@ -572,6 +595,7 @@ const ROWS: Row[] = [
       'From the Upper Falls side, a short trail brings you to the viewpoint that puts Echo Bridge’s full 130-foot arch in frame with the river below. In mid-October the hemlocks and maples turn the whole gorge gold.\n\nGo an hour before sunset. The descent to the under-bridge platform is steep and slick when wet — worth it, but take care with kids.',
     address: 'Chestnut Street at Ellis Street, Newton Upper Falls, MA 02464',
     offset: [0.002, 0.003],
+    imageKey: 'echo-bridge',
     tags: ['photography', 'fall foliage', 'echo bridge', 'free'],
     featured: true,
     rating: [4.8, 197],
@@ -586,6 +610,7 @@ const ROWS: Row[] = [
       'Built on an abandoned rail bed, the Greenway runs about a mile from Needham Street through the heart of the old industrial village, with murals, benches and interpretive signs along the way.\n\nFully paved and level, so it works for wheelchairs, strollers and scooters. Connects toward Hemlock Gorge at the north end for a longer outing.',
     address: 'Needham Street at Oak Street, Newton Upper Falls, MA 02464',
     offset: [-0.002, -0.001],
+    imageKey: 'upper-falls-greenway',
     recurrence: 'Daily, dawn to dusk',
     tags: ['rail trail', 'accessible', 'public art', 'walking', 'free'],
     rating: [4.6, 158],
@@ -600,6 +625,7 @@ const ROWS: Row[] = [
       'The old mill buildings along the river now house painters, potters, printmakers and a glassblower. Twice a year they open the doors, put out cider, and let you watch them work.\n\nFree to browse, and most artists sell directly. The buildings themselves — timber beams, huge industrial windows — are half the appeal.',
     address: 'Oak Street mill buildings, Newton Upper Falls, MA 02464',
     offset: [-0.0025, -0.0015],
+    imageKey: 'upper-falls-mill',
     event: [17, '11:00', 6],
     recurrence: 'Spring and fall open-studio weekends',
     tags: ['open studios', 'local art', 'shopping', 'free'],
@@ -632,6 +658,7 @@ const ROWS: Row[] = [
       'A Friends-of-the-reservation volunteer leads kids through the gorge looking for hemlock cones, river-carved rock, heron tracks and the best echo spot. Ninety minutes, mostly downhill, ends with the shouting.\n\nRegistration is free but capped at twenty kids. Long pants recommended — there is poison ivy off-trail.',
     address: 'Hemlock Gorge Reservation, Ellis Street, Newton Upper Falls, MA 02464',
     offset: [0.0025, 0.0025],
+    imageKey: 'echo-bridge',
     event: [11, '10:00', 1.5],
     recurrence: 'Monthly, May–October',
     tags: ['nature program', 'ages 5-10', 'guided', 'free'],
@@ -972,6 +999,7 @@ const ROWS: Row[] = [
       'The aqueduct trail is Newton’s best-kept walking secret: a level, grassy corridor built over the buried brick aqueduct that once carried Lake Cochituate water to Boston. It runs for miles, crossing streets at grade and slipping behind neighborhoods.\n\nFrom Waban you can walk toward Wellesley or east toward Newton Highlands. No hills, no traffic, very few people. Some sections are mown, some are rougher.',
     address: 'Beacon Street near Waban Square, Waban, MA 02468',
     offset: [0.001, 0.002],
+    imageKey: 'cochituate-aqueduct',
     tags: ['walking', 'flat', 'hidden gem', 'dog-friendly', 'free'],
     featured: true,
     rating: [4.7, 121],
@@ -1046,6 +1074,7 @@ const ROWS: Row[] = [
       'The West Newton Cinema is the kind of theatre that communities fight to keep — and Newton did, buying it collectively when it was at risk. Six screens, real butter on the popcorn, and a program that mixes new independent releases with foreign film and weekend classics.\n\nMatinees are cheap, the seats are comfortable, and the lobby still looks like 1937 in the best way. Cash-and-card both fine; weekend evening shows sell out.',
     address: '1296 Washington Street, West Newton, MA 02465',
     offset: [0.0005, 0.001],
+    imageKey: 'west-newton-cinema',
     price: 'paid',
     priceMin: 9,
     priceMax: 16,
@@ -1065,6 +1094,7 @@ const ROWS: Row[] = [
       'West Newton Hill has one of the densest concentrations of great 19th-century domestic architecture in Greater Boston — Queen Anne turrets, Shingle Style sweeps, and a few genuinely important Colonial Revival houses.\n\nA loop up Highland Street and back down Otis takes about an hour. It is entirely a public-sidewalk activity; please admire from the street. Best in late October.',
     address: 'Highland Street, West Newton, MA 02465',
     offset: [-0.002, 0.002],
+    imageKey: 'west-newton-hill',
     tags: ['architecture', 'walking', 'self-guided', 'fall foliage', 'free'],
     rating: [4.6, 94],
   },
@@ -1095,6 +1125,7 @@ const ROWS: Row[] = [
       'A loop that stitches together low-traffic residential streets, a stretch of the Cochituate Aqueduct path, and the Charles River bank — about six miles of nearly flat riding with only a couple of real intersections.\n\nA hybrid or gravel bike is ideal; the aqueduct section is grass and dirt. Ends back on Washington Street where the coffee is.',
     address: 'Washington Street at Elm Street, West Newton, MA 02465',
     offset: [-0.001, -0.002],
+    imageKey: 'cochituate-aqueduct',
     tags: ['cycling', 'flat', 'gravel', 'loop', 'free'],
     rating: [4.5, 66],
   },
@@ -1130,6 +1161,17 @@ export const ACTIVITIES: Activity[] = ROWS.map((row, i) => {
       : null;
   const [ratingAvg, ratingCount] = row.rating ?? [0, 0];
 
+  /**
+   * Real-photo resolution: a row naming a specific landmark (Echo Bridge,
+   * Crystal Lake, ...) gets that landmark's verified photo; every other row
+   * falls back to its own village's verified photo — always a real photo of
+   * the correct place, never an unrelated stock image.
+   */
+  const landmark = row.imageKey ? LANDMARK_IMAGES[row.imageKey] : undefined;
+  const imageUrl = landmark?.url ?? village.imageUrl;
+  const imageCredit = landmark?.credit ?? village.imageCredit;
+  const imageCreditUrl = landmark?.creditUrl ?? village.imageCreditUrl;
+
   return {
     id: `act_${String(i + 1).padStart(3, '0')}`,
     slug: slugify(row.title),
@@ -1141,7 +1183,9 @@ export const ACTIVITIES: Activity[] = ROWS.map((row, i) => {
     address: row.address,
     lat: Number((village.lat + dLat).toFixed(6)),
     lng: Number((village.lng + dLng).toFixed(6)),
-    imageUrl: imageFor(row.category, i),
+    imageUrl,
+    imageCredit,
+    imageCreditUrl,
     priceType,
     priceMin: row.priceMin ?? (priceType === 'free' ? 0 : null),
     priceMax: row.priceMax ?? null,
