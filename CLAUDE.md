@@ -51,7 +51,7 @@ src/
     sitemap.ts  robots.ts            SEO routes
     not-found.tsx
     actions/                         'use server' mutations
-      favorites.ts reviews.ts submissions.ts newsletter.ts admin.ts
+      favorites.ts reviews.ts submissions.ts newsletter.ts admin.ts rsvps.ts
     activities/
       page.tsx                       search + filter listing
       [slug]/page.tsx                detail page (+ JSON-LD, map, reviews)
@@ -76,16 +76,19 @@ src/
     queries.ts                       ALL reads live here
     filters.ts                       searchParams → typed filters
     types.ts utils.ts ics.ts
+    rsvp.ts                          RSVP slot generation + count tallying
+    visitor.ts                       anonymous visitor-id cookie
 middleware.ts                        Supabase session refresh
 supabase/
   migrations/0001_init.sql           schema + RLS + triggers + RPCs
+  migrations/0002_rsvps.sql          rsvps table + RLS
   seed.sql                           GENERATED — do not edit (npm run seed)
 scripts/seed.ts                      generates seed.sql, optionally pushes
 ```
 
 ## Database schema
 
-Defined in `supabase/migrations/0001_init.sql`. Nine tables:
+Defined in `supabase/migrations/0001_init.sql` (+ `0002_rsvps.sql`). Ten tables:
 
 | Table | Purpose | Key policy |
 | --- | --- | --- |
@@ -98,6 +101,21 @@ Defined in `supabase/migrations/0001_init.sql`. Nine tables:
 | `submissions` | moderation queue | anyone inserts as `pending`; submitter + admins read; admins moderate |
 | `newsletter_subscribers` | weekly digest list | public insert, **admin-only read** (mailing list is not public) |
 | `activity_views` | append-only raw analytics | admin read; written only via RPC |
+| `rsvps` | `(activity_id, slot_at, visitor_id)` — who's going, and when | public read/write, keyed by an anonymous cookie, not `auth.uid()` — see the migration's RLS comment for the tradeoff |
+
+### RSVPs (prototype)
+
+`src/lib/rsvp.ts` picks the selectable time slots: the real `start_at` for a
+dated event, or four generic near-term day buckets (today / tomorrow / this
+weekend / next week) for standing places, since those have no structured
+schedule. No sign-in required — visitors are identified by an anonymous
+`ntc_visitor` cookie (`src/lib/visitor.ts`), and `toggleRsvp`
+(`src/app/actions/rsvps.ts`) lets a visitor hold at most one slot per
+activity. Like favorites/reviews, this needs Supabase configured — demo mode
+shows real zero counts and reverts the click with an inline message rather
+than faking persistence (a per-process in-memory store was tried and
+discarded: Server Components and Server Actions don't reliably share
+module-level state, even within one dev server).
 
 ### Conventions
 

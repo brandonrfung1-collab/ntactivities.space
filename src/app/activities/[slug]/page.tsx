@@ -16,6 +16,7 @@ import {
   getFavoriteIds,
   getRelatedActivities,
   getReviews,
+  getRsvpSummary,
 } from '@/lib/queries';
 import { ACTIVITIES } from '@/lib/data/activities';
 import { getVillage } from '@/lib/data/villages';
@@ -32,6 +33,7 @@ import { MapEmbed } from '@/components/map-embed';
 import { RatingStars } from '@/components/rating-stars';
 import { ReviewForm } from '@/components/review-form';
 import { ReviewList } from '@/components/review-list';
+import { RsvpPanel } from '@/components/rsvp-panel';
 import { ViewTracker } from '@/components/view-tracker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -83,11 +85,12 @@ export default async function ActivityPage({ params }: { params: Promise<{ slug:
 
   const village = getVillage(activity.villageSlug);
   const category = getCategory(activity.categorySlug);
-  const [reviews, related, favoriteIds, user] = await Promise.all([
+  const [reviews, related, favoriteIds, user, rsvpSummary] = await Promise.all([
     getReviews(activity.id),
     getRelatedActivities(activity, 3),
     getFavoriteIds(),
     getCurrentUser(),
+    getRsvpSummary(activity),
   ]);
 
   const when = formatEventWindow(activity.startAt, activity.endAt);
@@ -366,6 +369,16 @@ export default async function ActivityPage({ params }: { params: Promise<{ slug:
                   </div>
                 )}
               </dl>
+
+              <Separator />
+
+              <RsvpPanel
+                activityId={activity.id}
+                activitySlug={activity.slug}
+                slots={rsvpSummary.slots}
+                initialCounts={rsvpSummary.counts}
+                initialGoingSlot={rsvpSummary.goingSlot}
+              />
 
               <Separator />
 

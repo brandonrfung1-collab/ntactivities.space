@@ -6,6 +6,8 @@ import { CATEGORY_BY_SLUG } from '@/lib/data/categories';
 import { VILLAGE_BY_SLUG } from '@/lib/data/villages';
 import { distanceMiles } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/server';
+import { getVisitorId } from '@/lib/visitor';
+import { buildSlotCounts, emptySummary, getRsvpSlots, type RsvpSummary } from '@/lib/rsvp';
 
 /**
  * Read layer for the app.
@@ -216,6 +218,32 @@ export async function getReviews(activityId: string): Promise<Review[]> {
     body: r.body ?? '',
     createdAt: r.created_at,
   }));
+}
+
+/** RSVP slots, counts and the current visitor's status for an activity. */
+export async function getRsvpSummary(activity: Activity): Promise<RsvpSummary> {
+  const slots = getRsvpSlots(activity);
+  const supabase = await createClient();
+
+  if (!supabase) return emptySummary(slots);
+
+  const visitorId = await getVisitorId();
+  const { data } = await supabase
+    .from('rsvps')
+    .select('slot_at, visitor_id')
+    .eq('activity_id', activity.id);
+
+  const rows = data ?? [];
+  const counts = buildSlotCounts(rows, slots.map((s) => s.key));
+
+  let goingSlot: string | null = null;
+  if (visitorId) {
+    const slotTimes = new Map(slots.map((s) => [new Date(s.key).getTime(), s.key]));
+    const own = rows.find((r) => r.visitor_id === visitorId);
+    if (own) goingSlot = slotTimes.get(new Date(own.slot_at as string).getTime()) ?? null;
+  }
+
+  return { slots, counts, goingSlot };
 }
 
 /** Activity IDs the current user has saved. */
