@@ -3,6 +3,15 @@
 Project conventions and architecture. Read this before making changes so future
 sessions stay consistent.
 
+## Standing instruction: auto-deploy (test site)
+
+This is a **test site** — the user (2026-08-27) said to immediately deploy any
+change made here, every time, without asking first. Commit and push to
+`origin/main` (git) and deploy to Vercel (`vercel --prod`, or push-to-deploy if
+that's wired up) as part of finishing any task in this repo. Do **not** ask for
+confirmation before deploying. Keep doing this until the user explicitly says
+to stop.
+
 ## What this is
 
 A mobile-first activity/event discovery site for **Newton, Massachusetts** and
