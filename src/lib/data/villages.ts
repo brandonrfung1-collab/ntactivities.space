@@ -135,11 +135,16 @@ export const VILLAGES: Village[] = [
     zip: '02460',
     lat: 42.3512,
     lng: -71.2078,
+    // The old photo was the train station platform — not the actual Walnut
+    // Street business strip the tagline describes. This is the Masonic
+    // Building at 296-304 Walnut Street, ground-floor retail since 1896 and
+    // a contributing property of the Newtonville Historic District — the
+    // literal heart of the downtown block.
     imageUrl:
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/Newtonville_station_from_Walnut_Street%2C_March_2013.JPG/1920px-Newtonville_station_from_Walnut_Street%2C_March_2013.JPG',
-    imageCredit: 'Pi.1415926535 / Wikimedia Commons, CC BY-SA 3.0',
+      'https://upload.wikimedia.org/wikipedia/commons/9/9b/Masonic_Building%2C_2022%2C_Newtonville_MA.jpg',
+    imageCredit: 'John Phelan / Wikimedia Commons, CC BY-SA 4.0',
     imageCreditUrl:
-      'https://commons.wikimedia.org/wiki/File:Newtonville_station_from_Walnut_Street,_March_2013.JPG',
+      'https://commons.wikimedia.org/wiki/File:Masonic_Building,_2022,_Newtonville_MA.jpg',
     funFact:
       'The Newtonville farmers market has run on Walnut Street for decades and is a Tuesday institution.',
   },
