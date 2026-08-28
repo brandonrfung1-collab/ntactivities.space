@@ -31,6 +31,7 @@ import { CategoryIcon } from '@/components/category-icon';
 import { FavoriteButton } from '@/components/favorite-button';
 import { MapEmbed } from '@/components/map-embed';
 import { RatingStars } from '@/components/rating-stars';
+import { ScheduleBadge } from '@/components/schedule-badge';
 import { ReviewForm } from '@/components/review-form';
 import { ReviewList } from '@/components/review-list';
 import { RsvpPanel } from '@/components/rsvp-panel';
@@ -229,6 +230,7 @@ export default async function ActivityPage({ params }: { params: Promise<{ slug:
                 <Badge variant="outline">{price}</Badge>
               )}
               {activity.featured && <Badge variant="accent">Featured</Badge>}
+              <ScheduleBadge activity={activity} />
             </div>
 
             <h1 className="mt-3 text-balance font-display text-3xl font-bold leading-tight sm:text-4xl">

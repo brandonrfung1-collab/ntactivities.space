@@ -7,9 +7,10 @@ import { getActivities, getFavoriteIds } from '@/lib/queries';
 import { parseFilters, type SearchParams } from '@/lib/filters';
 import { SITE_URL } from '@/lib/supabase/config';
 import { ActivityResults } from '@/components/activity-results';
+import { ResultsView } from '@/components/results-view';
 import { FilterBar } from '@/components/filter-bar';
 import { CategoryIcon } from '@/components/category-icon';
-import { cn } from '@/lib/utils';
+import { cn, distanceMiles } from '@/lib/utils';
 
 export const revalidate = 3600;
 
@@ -61,6 +62,10 @@ export default async function CategoryPage({
   const villagesWithListings = VILLAGES.filter((v) =>
     activities.some((a) => a.villageSlug === v.slug),
   );
+
+  const distances = filters.near
+    ? new Map(activities.map((a) => [a.id, distanceMiles(filters.near!, a)]))
+    : undefined;
 
   return (
     <div className="container py-10">
@@ -119,12 +124,15 @@ export default async function CategoryPage({
         {activities.length} {activities.length === 1 ? 'listing' : 'listings'}
       </h2>
 
-      <ActivityResults
-        activities={activities}
-        favoriteIds={favoriteIds}
-        clearHref={`/categories/${category.slug}`}
-        emptyHint={`Nothing in ${category.name} matches those filters yet.`}
-      />
+      <ResultsView activities={activities}>
+        <ActivityResults
+          activities={activities}
+          favoriteIds={favoriteIds}
+          clearHref={`/categories/${category.slug}`}
+          emptyHint={`Nothing in ${category.name} matches those filters yet.`}
+          distances={distances}
+        />
+      </ResultsView>
     </div>
   );
 }

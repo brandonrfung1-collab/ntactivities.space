@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import { getActivities, getFavoriteIds } from '@/lib/queries';
 import { describeFilters, parseFilters, type SearchParams } from '@/lib/filters';
+import { distanceMiles } from '@/lib/utils';
 import { FilterBar } from '@/components/filter-bar';
 import { ActivityResults } from '@/components/activity-results';
+import { ResultsView } from '@/components/results-view';
 
 export const metadata: Metadata = {
   title: 'Things to do in Newton, MA',
@@ -23,6 +25,9 @@ export default async function ActivitiesPage({
     getFavoriteIds(),
   ]);
   const summary = describeFilters(filters);
+  const distances = filters.near
+    ? new Map(activities.map((a) => [a.id, distanceMiles(filters.near!, a)]))
+    : undefined;
 
   return (
     <div className="container py-10">
@@ -52,7 +57,9 @@ export default async function ActivitiesPage({
         />
       </div>
 
-      <ActivityResults activities={activities} favoriteIds={favoriteIds} />
+      <ResultsView activities={activities}>
+        <ActivityResults activities={activities} favoriteIds={favoriteIds} distances={distances} />
+      </ResultsView>
     </div>
   );
 }

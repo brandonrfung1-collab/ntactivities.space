@@ -10,11 +10,14 @@ export function ActivityResults({
   favoriteIds = new Set<string>(),
   emptyHint = 'Try widening your date range or clearing a filter.',
   clearHref = '/activities',
+  distances,
 }: {
   activities: Activity[];
   favoriteIds?: Set<string>;
   emptyHint?: string;
   clearHref?: string;
+  /** Miles from the visitor's "near me" point, keyed by activity id. */
+  distances?: Map<string, number>;
 }) {
   if (!activities.length) {
     return (
@@ -42,6 +45,7 @@ export function ActivityResults({
             activity={activity}
             isFavorite={favoriteIds.has(activity.id)}
             priority={i < 3}
+            distanceMiles={distances?.get(activity.id)}
           />
         </li>
       ))}

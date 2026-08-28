@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CalendarDays, MapPin } from 'lucide-react';
+import { CalendarDays, MapPin, Navigation } from 'lucide-react';
 import type { Activity } from '@/lib/types';
 import { getVillage } from '@/lib/data/villages';
 import { getCategory } from '@/lib/data/categories';
@@ -9,17 +9,21 @@ import { RatingStars } from '@/components/rating-stars';
 import { CategoryIcon } from '@/components/category-icon';
 import { Badge } from '@/components/ui/badge';
 import { FavoriteButton } from '@/components/favorite-button';
+import { ScheduleBadge } from '@/components/schedule-badge';
 
 export function ActivityCard({
   activity,
   isFavorite = false,
   className,
   priority = false,
+  distanceMiles,
 }: {
   activity: Activity;
   isFavorite?: boolean;
   className?: string;
   priority?: boolean;
+  /** When set (a "near me" filter is active), shown as a "X mi away" line. */
+  distanceMiles?: number;
 }) {
   const village = getVillage(activity.villageSlug);
   const category = getCategory(activity.categorySlug);
@@ -51,6 +55,7 @@ export function ActivityCard({
             <Badge variant="secondary">{price}</Badge>
           )}
           {activity.featured && <Badge variant="accent">Featured</Badge>}
+          <ScheduleBadge activity={activity} />
         </div>
       </div>
 
@@ -88,6 +93,12 @@ export function ActivityCard({
           <p className="flex items-center gap-1.5">
             <MapPin className="size-3.5" aria-hidden />
             {village?.name ?? 'Newton'}
+            {distanceMiles != null && (
+              <span className="inline-flex items-center gap-1 text-primary">
+                <Navigation className="size-3" aria-hidden />
+                {distanceMiles < 0.1 ? '<0.1 mi' : `${distanceMiles.toFixed(1)} mi`}
+              </span>
+            )}
           </p>
           <RatingStars value={activity.ratingAvg} count={activity.ratingCount} />
         </div>

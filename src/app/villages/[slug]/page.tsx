@@ -9,11 +9,12 @@ import { parseFilters, type SearchParams } from '@/lib/filters';
 import { SITE_URL } from '@/lib/supabase/config';
 import { ActivityImage } from '@/components/activity-image';
 import { ActivityResults } from '@/components/activity-results';
+import { ResultsView } from '@/components/results-view';
 import { FilterBar } from '@/components/filter-bar';
 import { NewsletterForm } from '@/components/newsletter-form';
 import { CategoryIcon } from '@/components/category-icon';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, distanceMiles } from '@/lib/utils';
 
 export const revalidate = 3600;
 
@@ -67,6 +68,10 @@ export default async function VillagePage({
   const presentCategories = CATEGORIES.filter((c) =>
     activities.some((a) => a.categorySlug === c.slug),
   );
+
+  const distances = filters.near
+    ? new Map(activities.map((a) => [a.id, distanceMiles(filters.near!, a)]))
+    : undefined;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -177,12 +182,15 @@ export default async function VillagePage({
               {village.name}
             </h2>
 
-            <ActivityResults
-              activities={activities}
-              favoriteIds={favoriteIds}
-              clearHref={`/villages/${village.slug}`}
-              emptyHint={`Nothing matches those filters in ${village.name} yet. Try clearing them, or browse all of Newton.`}
-            />
+            <ResultsView activities={activities}>
+              <ActivityResults
+                activities={activities}
+                favoriteIds={favoriteIds}
+                clearHref={`/villages/${village.slug}`}
+                emptyHint={`Nothing matches those filters in ${village.name} yet. Try clearing them, or browse all of Newton.`}
+                distances={distances}
+              />
+            </ResultsView>
           </div>
 
           {/* ─── Sidebar ────────────────────────────────────────────────── */}

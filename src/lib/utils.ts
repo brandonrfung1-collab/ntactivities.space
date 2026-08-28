@@ -90,3 +90,30 @@ export function mapEmbedUrl(query: string): string {
 export function mapDirectionsUrl(query: string): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(query)}`;
 }
+
+/**
+ * The upcoming (or current) Saturday/Sunday as yyyy-mm-dd, in America/New_York
+ * regardless of the caller's own timezone — backs the "This weekend" quick
+ * filter, and needs to agree between server and client renders.
+ */
+export function upcomingWeekendRange(now: Date = new Date()): { from: string; to: string } {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(now).map((p) => [p.type, p.value]));
+  const weekdayIdx = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[parts.weekday] ?? 0;
+  const daysUntilSat = (6 - weekdayIdx + 7) % 7;
+
+  const today = new Date(`${parts.year}-${parts.month}-${parts.day}T12:00:00Z`);
+  const sat = new Date(today);
+  sat.setUTCDate(sat.getUTCDate() + daysUntilSat);
+  const sun = new Date(sat);
+  sun.setUTCDate(sat.getUTCDate() + 1);
+
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  return { from: iso(sat), to: iso(sun) };
+}
