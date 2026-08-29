@@ -110,6 +110,7 @@ export default async function CategoryPage({
             from: filters.from,
             to: filters.to,
             price: filters.price,
+            open: filters.open ? '1' : undefined,
             radius: filters.radius?.toString(),
             lat: filters.near?.lat.toString(),
             lng: filters.near?.lng.toString(),

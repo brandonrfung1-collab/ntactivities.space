@@ -5,6 +5,7 @@ import { ACTIVITIES } from '@/lib/data/activities';
 import { CATEGORY_BY_SLUG } from '@/lib/data/categories';
 import { VILLAGE_BY_SLUG } from '@/lib/data/villages';
 import { distanceMiles } from '@/lib/utils';
+import { getAvailabilityBadge } from '@/lib/schedule';
 import { createClient } from '@/lib/supabase/server';
 import { getVisitorId } from '@/lib/visitor';
 import { buildSlotCounts, emptySummary, getRsvpSlots, type RsvpSummary } from '@/lib/rsvp';
@@ -95,6 +96,13 @@ export function applyFilters(input: Activity[], f: ActivityFilters): Activity[] 
 
   if (f.price === 'free') out = out.filter((a) => a.priceType === 'free');
   if (f.price === 'paid') out = out.filter((a) => a.priceType !== 'free');
+
+  // "Open now" reuses the same best-effort recurrence/date-window parser that
+  // powers the card badge (`lib/schedule.ts`), evaluated once at request time.
+  if (f.open) {
+    const now = new Date();
+    out = out.filter((a) => getAvailabilityBadge(a, now)?.tone === 'live');
+  }
 
   // Date range applies to dated events. Places (isEvent === false) are always
   // available, so they stay in the results rather than being filtered out.

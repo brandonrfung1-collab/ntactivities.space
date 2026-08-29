@@ -92,6 +92,36 @@ export function mapDirectionsUrl(query: string): string {
 }
 
 /**
+ * `now` plus `offsetDays`, as yyyy-mm-dd in America/New_York regardless of the
+ * caller's own timezone — backs the "Today"/"Tomorrow" quick filters, and
+ * needs to agree between server and client renders.
+ */
+export function nyDateString(offsetDays = 0, now: Date = new Date()): string {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(now).map((p) => [p.type, p.value]));
+  const d = new Date(`${parts.year}-${parts.month}-${parts.day}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
+}
+
+/** "Today" as a from/to range, in America/New_York. */
+export function todayRange(now: Date = new Date()): { from: string; to: string } {
+  const day = nyDateString(0, now);
+  return { from: day, to: day };
+}
+
+/** "Tomorrow" as a from/to range, in America/New_York. */
+export function tomorrowRange(now: Date = new Date()): { from: string; to: string } {
+  const day = nyDateString(1, now);
+  return { from: day, to: day };
+}
+
+/**
  * The upcoming (or current) Saturday/Sunday as yyyy-mm-dd, in America/New_York
  * regardless of the caller's own timezone — backs the "This weekend" quick
  * filter, and needs to agree between server and client renders.

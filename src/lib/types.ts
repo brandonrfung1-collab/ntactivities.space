@@ -122,6 +122,8 @@ export interface ActivityFilters {
   from?: string;
   to?: string;
   price?: 'free' | 'paid' | 'all';
+  /** Only activities open/happening right now (per `lib/schedule.ts`). */
+  open?: boolean;
   /** Radius in miles from `near`. */
   radius?: number;
   near?: { lat: number; lng: number };

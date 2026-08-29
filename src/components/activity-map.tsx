@@ -5,7 +5,7 @@ import type { Map as LeafletMap, Marker } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Activity } from '@/lib/types';
 import { getVillage } from '@/lib/data/villages';
-import { cn } from '@/lib/utils';
+import { cn, formatEventWindow } from '@/lib/utils';
 
 // Newton, MA town center — used only as a fallback view when nothing plots.
 const NEWTON_CENTER: [number, number] = [42.337, -71.209];
@@ -54,11 +54,13 @@ export function ActivityMap({ activities, className }: { activities: Activity[];
       const points = activities.filter((a) => a.lat && a.lng);
       for (const a of points) {
         const village = getVillage(a.villageSlug);
+        const when = formatEventWindow(a.startAt, a.endAt);
         const marker = L.marker([a.lat, a.lng]).addTo(map);
         marker.bindPopup(
           `<div style="min-width:170px"><strong>${escapeHtml(a.title)}</strong><br/>` +
-            `<span style="color:#666">${escapeHtml(village?.name ?? '')}</span><br/>` +
-            `<a href="/activities/${a.slug}" style="color:#2f6b3c;font-weight:600">View details &rarr;</a></div>`,
+            `<span style="color:#666">${escapeHtml(village?.name ?? '')}</span>` +
+            (when ? `<br/><span style="color:#666">${escapeHtml(when)}</span>` : '') +
+            `<br/><a href="/activities/${a.slug}" style="color:#2f6b3c;font-weight:600">View details &rarr;</a></div>`,
         );
         markersRef.current.push(marker);
       }

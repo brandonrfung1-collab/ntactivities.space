@@ -36,6 +36,7 @@ export function parseFilters(params: SearchParams): ActivityFilters {
     from: isDate(one(params.from)) ? one(params.from) : undefined,
     to: isDate(one(params.to)) ? one(params.to) : undefined,
     price: price === 'free' || price === 'paid' ? price : 'all',
+    open: one(params.open) === '1' ? true : undefined,
     radius: Number.isFinite(radius) && radius > 0 ? radius : undefined,
     near:
       Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0
@@ -53,6 +54,7 @@ export function describeFilters(f: ActivityFilters): string | null {
   if (f.category) bits.push(CATEGORY_BY_SLUG.get(f.category)!.name);
   if (f.price === 'free') bits.push('free only');
   if (f.price === 'paid') bits.push('paid only');
+  if (f.open) bits.push('open now');
   if (f.from && f.to) bits.push(`${f.from} to ${f.to}`);
   else if (f.from) bits.push(`from ${f.from}`);
   else if (f.to) bits.push(`until ${f.to}`);

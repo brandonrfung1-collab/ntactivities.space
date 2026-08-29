@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { VILLAGES } from '@/lib/data/villages';
 import { CATEGORIES } from '@/lib/data/categories';
-import { cn, upcomingWeekendRange } from '@/lib/utils';
+import { cn, todayRange, tomorrowRange, upcomingWeekendRange } from '@/lib/utils';
+import { FILTER_PRESETS, presetMatches, resolvePreset } from '@/lib/presets';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ export interface FilterValues {
   from?: string;
   to?: string;
   price?: string;
+  open?: string;
   radius?: string;
   lat?: string;
   lng?: string;
@@ -94,8 +96,19 @@ export function FilterBar({
   }
 
   const hasFilters = Boolean(
-    values.q || values.from || values.to || (values.price && values.price !== 'all') || coords,
+    values.q ||
+      values.from ||
+      values.to ||
+      (values.price && values.price !== 'all') ||
+      values.open === '1' ||
+      coords,
   );
+
+  function clearLocation() {
+    setCoords(null);
+    setGeoError(null);
+    setSort((s) => (s === 'nearest' ? 'recommended' : s));
+  }
 
   // Builds a link that carries every current filter forward, with `overrides`
   // applied — so a quick chip toggles just its own filter, combining with
@@ -108,6 +121,7 @@ export function FilterBar({
       from: values.from,
       to: values.to,
       price: values.price,
+      open: values.open,
       radius: values.radius,
       lat: coords?.lat,
       lng: coords?.lng,
@@ -123,6 +137,11 @@ export function FilterBar({
   }
 
   const isFree = values.price === 'free';
+  const isOpenNow = values.open === '1';
+  const today = todayRange();
+  const isToday = values.from === today.from && values.to === today.to;
+  const tomorrow = tomorrowRange();
+  const isTomorrow = values.from === tomorrow.from && values.to === tomorrow.to;
   const weekend = upcomingWeekendRange();
   const isWeekend = values.from === weekend.from && values.to === weekend.to;
   const isFamily = values.category === FAMILY_CATEGORY;
@@ -246,9 +265,20 @@ export function FilterBar({
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                {coords
-                  ? 'Using your location — sorted nearest first.'
-                  : (geoError ?? 'Tap the pin to sort by distance from you.')}
+                {coords ? (
+                  <>
+                    Using your location — sorted nearest first.{' '}
+                    <button
+                      type="button"
+                      onClick={clearLocation}
+                      className="font-medium text-primary underline underline-offset-2"
+                    >
+                      Clear
+                    </button>
+                  </>
+                ) : (
+                  (geoError ?? 'Tap the pin to sort by distance from you.')
+                )}
               </p>
             </div>
 
@@ -283,8 +313,26 @@ export function FilterBar({
 
       {/* Quick chips — plain links, so they combine with whatever else is active. */}
       <div className="flex flex-wrap gap-2">
-        <Link href={withParams({ price: isFree ? undefined : 'free' })} className={chipClass(isFree)}>
-          Free
+        <Link href={withParams({ open: isOpenNow ? undefined : '1' })} className={chipClass(isOpenNow)}>
+          Open now
+        </Link>
+        <Link
+          href={withParams({
+            from: isToday ? undefined : today.from,
+            to: isToday ? undefined : today.to,
+          })}
+          className={chipClass(isToday)}
+        >
+          Today
+        </Link>
+        <Link
+          href={withParams({
+            from: isTomorrow ? undefined : tomorrow.from,
+            to: isTomorrow ? undefined : tomorrow.to,
+          })}
+          className={chipClass(isTomorrow)}
+        >
+          Tomorrow
         </Link>
         <Link
           href={withParams({
@@ -295,6 +343,9 @@ export function FilterBar({
         >
           This weekend
         </Link>
+        <Link href={withParams({ price: isFree ? undefined : 'free' })} className={chipClass(isFree)}>
+          Free
+        </Link>
         {showFamilyChip && (
           <Link
             href={withParams({ category: isFamily ? undefined : FAMILY_CATEGORY })}
@@ -303,6 +354,37 @@ export function FilterBar({
             Family &amp; Kids
           </Link>
         )}
+      </div>
+
+      {/* Combination presets — single click applies every filter the preset
+          bundles. Config lives in `lib/presets.ts`, not here, so new
+          combinations don't require touching this component. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground">Presets:</span>
+        {FILTER_PRESETS.map((preset) => {
+          const resolved = resolvePreset(preset);
+          const active = presetMatches(preset, values);
+          const href = active
+            ? withParams({
+                price: undefined,
+                category: lockCategory ? values.category : undefined,
+                open: undefined,
+                from: undefined,
+                to: undefined,
+              })
+            : withParams({
+                price: resolved.price,
+                category: resolved.category,
+                open: resolved.open ? '1' : undefined,
+                from: resolved.from,
+                to: resolved.to,
+              });
+          return (
+            <Link key={preset.key} href={href} className={chipClass(active)}>
+              {preset.label}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
