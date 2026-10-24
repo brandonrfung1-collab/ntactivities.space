@@ -10,8 +10,9 @@ import { VILLAGE_BY_SLUG } from '@/lib/data/villages';
  * data meant to be replaced by real submissions. See CLAUDE.md → "Seed data"
  * before editing.
  *
- * Event timestamps are generated *relative to today* so the demo never shows a
- * calendar full of past events.
+ * Event timestamps are the *next real occurrence* of each event's schedule
+ * (weekday, season, nth-weekday or fixed date), so the demo never shows a
+ * calendar full of past events or a Tuesday market dated on a Sunday.
  */
 
 /**
@@ -93,14 +94,71 @@ export const LANDMARK_IMAGES: Record<string, { url: string; credit: string; cred
   },
 };
 
-/** ISO timestamp `n` days from today at the given Eastern-time wall clock. */
-function inDays(n: number, time = '10:00'): string {
-  const [h, m] = time.split(':').map(Number);
-  const d = new Date();
-  d.setDate(d.getDate() + n);
-  // Eastern Daylight Time is UTC-4; close enough for illustrative seed data.
-  d.setUTCHours(h + 4, m, 0, 0);
-  return d.toISOString();
+/**
+ * When a recurring event happens. Resolved by `nextOccurrence` to the next real
+ * date that fits, so a "Tuesday market" always lands on a Tuesday and a July
+ * festival never shows up in October.
+ */
+interface EventRule {
+  /** Days of the week it can fall on (0 = Sunday). Omit for any day. */
+  days?: number[];
+  /** Months it runs in (1 = January). Omit for year-round. */
+  months?: number[];
+  /** Only the nth matching weekday of the month, e.g. 2 = "second Saturday". */
+  nth?: number;
+  /** A fixed day of the month, e.g. 4 for the Fourth of July. */
+  date?: number;
+}
+
+/** Inclusive month range, e.g. months(6, 10) → June through October. */
+function months(from: number, to: number): number[] {
+  return Array.from({ length: to - from + 1 }, (_, i) => from + i);
+}
+
+const EASTERN = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: 'numeric',
+  hourCycle: 'h23',
+});
+
+/** Eastern-time wall clock of an instant, as a fake-UTC millisecond value. */
+function easternWallClock(ms: number): number {
+  const p = Object.fromEntries(EASTERN.formatToParts(ms).map((x) => [x.type, Number(x.value)]));
+  return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute);
+}
+
+/** The instant at which Eastern-time clocks read the given date and time (DST-aware). */
+function easternToUtc(y: number, m: number, d: number, h: number, min: number): number {
+  const wall = Date.UTC(y, m - 1, d, h, min);
+  let guess = wall;
+  for (let i = 0; i < 2; i++) guess = wall - (easternWallClock(guess) - guess);
+  return guess;
+}
+
+/** ISO start of the next occurrence of `rule` at `time` (Eastern) that has not started yet. */
+function nextOccurrence(rule: EventRule, time: string): string {
+  const [h, min] = time.split(':').map(Number);
+  const now = Date.now();
+  const today = new Date(easternWallClock(now));
+  for (let offset = 0; offset < 800; offset++) {
+    const day = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + offset),
+    );
+    const y = day.getUTCFullYear();
+    const m = day.getUTCMonth() + 1;
+    const d = day.getUTCDate();
+    if (rule.months && !rule.months.includes(m)) continue;
+    if (rule.days && !rule.days.includes(day.getUTCDay())) continue;
+    if (rule.nth && Math.ceil(d / 7) !== rule.nth) continue;
+    if (rule.date && d !== rule.date) continue;
+    const start = easternToUtc(y, m, d, h, min);
+    if (start >= now) return new Date(start).toISOString();
+  }
+  throw new Error(`No upcoming date matches event rule ${JSON.stringify(rule)}`);
 }
 
 /** Shorthand row so 65 entries stay readable. */
@@ -118,8 +176,8 @@ interface Row {
   price?: PriceType;
   priceMin?: number;
   priceMax?: number;
-  /** [startsInDays, startTime, durationHours] — presence marks it an event. */
-  event?: [number, string, number];
+  /** [when it recurs, start time (Eastern), duration in hours] — presence marks it an event. */
+  event?: [EventRule, string, number];
   recurrence?: string;
   website?: string;
   phone?: string;
@@ -173,7 +231,7 @@ const ROWS: Row[] = [
     address: '375 Auburn Street, Auburndale, MA 02466',
     offset: [-0.001, -0.003],
     imageKey: 'auburndale-library',
-    event: [3, '10:30', 1],
+    event: [{ days: [3] }, '10:30', 1],
     recurrence: 'Every Wednesday, year-round',
     tags: ['toddlers', 'library', 'indoor', 'free'],
     rating: [4.9, 58],
@@ -247,7 +305,7 @@ const ROWS: Row[] = [
       'A neighborhood-organized group run that meets at the Beacon Street gate and does two loops of the Reservoir — roughly three miles — with a pace group for everyone from 8-minute miles to a brisk walk.\n\nNo sign-up, no fee, no one gets left behind. Many people stay for a drink in Cleveland Circle afterward.',
     address: 'Beacon Street Gate, Chestnut Hill Reservoir, Chestnut Hill, MA 02467',
     offset: [0.003, 0.002],
-    event: [2, '18:30', 1.5],
+    event: [{ days: [4], months: months(3, 11) }, '18:30', 1.5],
     recurrence: 'Every Thursday, March–November',
     tags: ['running', 'social', 'beginner friendly', 'free'],
     rating: [4.6, 64],
@@ -263,7 +321,7 @@ const ROWS: Row[] = [
     address: 'Boylston Street Plaza, Chestnut Hill, MA 02467',
     offset: [-0.002, 0.001],
     imageKey: 'chestnut-hill-street',
-    event: [4, '09:00', 4],
+    event: [{ days: [6], months: months(6, 10) }, '09:00', 4],
     recurrence: 'Saturdays, June–October',
     price: 'varies',
     tags: ['farmers market', 'local', 'live music', 'family'],
@@ -300,7 +358,7 @@ const ROWS: Row[] = [
       'The city puts a stage on the Newton Centre Green and programs eight weeks of free evening concerts: brass bands, blues, a swing night, and one reliably chaotic kids’ music show.\n\nThe smart move is to pick up dinner from one of the two dozen restaurants ringing the square and eat on the grass. Bring a low chair; the green fills in fast after 6:30.',
     address: 'Centre Street at Beacon Street, Newton Centre, MA 02459',
     offset: [0.001, 0.001],
-    event: [2, '19:00', 2],
+    event: [{ days: [4], months: [7, 8] }, '19:00', 2],
     recurrence: 'Thursdays, July–August',
     tags: ['live music', 'free', 'family', 'outdoor', 'summer'],
     featured: true,
@@ -347,7 +405,7 @@ const ROWS: Row[] = [
       'A long-running trivia night that draws a mix of grad students, teachers, and neighbors who have been playing on the same team for a decade. Six rounds, a music round, and a genuinely competitive final wager.\n\nArrive by 7:15 to get a table. No cover; a house tab prize for the winners. Kitchen runs late, which in Newton is worth noting.',
     address: 'Union Street, Newton Centre, MA 02459',
     offset: [-0.001, 0.002],
-    event: [1, '19:30', 2.5],
+    event: [{ days: [2] }, '19:30', 2.5],
     recurrence: 'Every Tuesday, year-round',
     price: 'varies',
     tags: ['trivia', 'bar', 'social', '21+'],
@@ -410,7 +468,7 @@ const ROWS: Row[] = [
     address: 'Farlow Park, Church Street, Newton Corner, MA 02458',
     offset: [-0.0015, 0.0025],
     imageKey: 'farlow-park',
-    event: [6, '14:00', 1.5],
+    event: [{ days: [6], nth: 2, months: months(5, 10) }, '14:00', 1.5],
     recurrence: 'Second Saturday of the month, May–October',
     price: 'paid',
     priceMin: 10,
@@ -488,7 +546,7 @@ const ROWS: Row[] = [
       'Newton’s community theatre scene is more ambitious than you would expect: full musicals, Sondheim revivals, and new work by local playwrights, staged in an intimate house where no seat is far from the stage.\n\nRuns are short — usually two weekends — so check dates and buy early. Street parking is free after 6pm.',
     address: 'Lincoln Street, Newton Highlands, MA 02461',
     offset: [0.001, -0.002],
-    event: [9, '19:30', 2.5],
+    event: [{ days: [5] }, '19:30', 2.5],
     recurrence: 'Select Fri–Sun through the season',
     price: 'paid',
     priceMin: 18,
@@ -505,7 +563,7 @@ const ROWS: Row[] = [
       'A local studio brings mats and a portable speaker to the Cold Spring Park lawn for an all-levels vinyasa class in the open air. Sixty minutes, gentle enough for beginners, with modifications called throughout.\n\nSuggested $10 donation, nobody turned away. Cancelled for rain — check the studio’s socials by 7am.',
     address: 'Cold Spring Park lawn, 1200 Beacon Street, Newton Highlands, MA 02461',
     offset: [0.0045, 0.0025],
-    event: [4, '08:30', 1],
+    event: [{ days: [6], months: months(6, 9) }, '08:30', 1],
     recurrence: 'Saturdays, June–September',
     price: 'varies',
     tags: ['yoga', 'outdoor', 'all levels', 'donation'],
@@ -626,8 +684,8 @@ const ROWS: Row[] = [
     address: 'Oak Street mill buildings, Newton Upper Falls, MA 02464',
     offset: [-0.0025, -0.0015],
     imageKey: 'upper-falls-mill',
-    event: [17, '11:00', 6],
-    recurrence: 'Spring and fall open-studio weekends',
+    event: [{ days: [6], nth: 1, months: [5, 11] }, '11:00', 6],
+    recurrence: 'First Saturday of May and November',
     tags: ['open studios', 'local art', 'shopping', 'free'],
     rating: [4.7, 71],
   },
@@ -659,8 +717,8 @@ const ROWS: Row[] = [
     address: 'Hemlock Gorge Reservation, Ellis Street, Newton Upper Falls, MA 02464',
     offset: [0.0025, 0.0025],
     imageKey: 'echo-bridge',
-    event: [11, '10:00', 1.5],
-    recurrence: 'Monthly, May–October',
+    event: [{ days: [6], nth: 3, months: months(5, 10) }, '10:00', 1.5],
+    recurrence: 'Third Saturday of the month, May–October',
     tags: ['nature program', 'ages 5-10', 'guided', 'free'],
     rating: [4.8, 44],
   },
@@ -676,7 +734,7 @@ const ROWS: Row[] = [
       'The Newtonville market is a genuine neighborhood institution. A dozen vendors set up along Walnut Street with Massachusetts produce, sourdough, cut flowers, honey, and a couple of hot-food trucks.\n\nGoes on rain or shine. SNAP and HIP are accepted, and the market matches HIP dollars for fruit and vegetables.',
     address: 'Walnut Street at Austin Street, Newtonville, MA 02460',
     offset: [0.0005, 0.001],
-    event: [1, '13:30', 5],
+    event: [{ days: [2], months: months(6, 10) }, '13:30', 5],
     recurrence: 'Tuesdays, mid-June through October',
     price: 'varies',
     tags: ['farmers market', 'local', 'produce', 'SNAP/HIP'],
@@ -742,7 +800,7 @@ const ROWS: Row[] = [
       'While parents shop, volunteers run a craft table beside the market: seed planting in paper pots, vegetable stamp printing, and a weekly produce-tasting dare that gets more kids eating kohlrabi than you would believe.\n\nDrop in any time during market hours. Free, no registration, aimed at ages 3–9.',
     address: 'Walnut Street at Austin Street, Newtonville, MA 02460',
     offset: [0.001, 0.0015],
-    event: [1, '14:00', 3],
+    event: [{ days: [2], months: months(6, 10) }, '14:00', 3],
     recurrence: 'Tuesdays with the market, June–October',
     tags: ['crafts', 'ages 3-9', 'drop-in', 'free'],
     rating: [4.6, 51],
@@ -759,8 +817,8 @@ const ROWS: Row[] = [
       'The Festa is the biggest thing that happens in Newton all year. Adams Street closes down for four days of food stalls, carnival rides, brass bands, and a Sunday procession that carries the statue of Our Lady of Mount Carmel through the village.\n\nGo hungry: sausage and peppers, arancini, zeppole, and Italian ice. Free to attend; bring cash for food and rides. Parking is impossible — walk in from Watertown Street.',
     address: 'Adams Street, Nonantum, MA 02458',
     offset: [0.0005, 0.001],
-    event: [24, '17:00', 6],
-    recurrence: 'Four days each July',
+    event: [{ days: [4], nth: 3, months: [7] }, '17:00', 78],
+    recurrence: 'Thursday–Sunday, mid-July',
     price: 'varies',
     tags: ['festival', 'italian', 'food', 'fireworks', 'family'],
     featured: true,
@@ -824,8 +882,8 @@ const ROWS: Row[] = [
       'Smaller and homier than the Festa: a morning 5K, a short parade of scout troops and antique cars, a stage of local bands, and a fire truck that hoses down the kids at the end of the afternoon.\n\nFree, and about as purely local as Newton gets. Food is by neighborhood organizations, so bring cash and small bills.',
     address: 'Watertown Street at Adams Street, Nonantum, MA 02458',
     offset: [0.0015, 0.0005],
-    event: [38, '10:00', 6],
-    recurrence: 'One Saturday each September',
+    event: [{ days: [6], nth: 2, months: [9] }, '10:00', 6],
+    recurrence: 'Second Saturday of September',
     tags: ['block party', 'parade', '5K', 'family', 'free'],
     rating: [4.7, 118],
   },
@@ -929,7 +987,7 @@ const ROWS: Row[] = [
       'The farmstand is small and the inventory is whatever came out of the ground that morning: greens, tomatoes, garlic scapes in June, squash in September, plus eggs and cut-flower bunches.\n\nCards accepted. Best selection right at opening; by the last hour the tomatoes are usually gone. CSA shares are available for the season.',
     address: '303 Nahanton Street, Thompsonville, MA 02459',
     offset: [0.0012, 0.0008],
-    event: [2, '14:00', 4],
+    event: [{ days: [2, 3, 4, 5, 6], months: months(6, 10) }, '14:00', 4],
     recurrence: 'Tue–Sat afternoons, June–October',
     price: 'paid',
     priceMin: 3,
@@ -947,7 +1005,7 @@ const ROWS: Row[] = [
       'Farm educators walk small groups through a full cycle in one session — sowing a tray, harvesting a bed, then washing and tasting whatever came up. Hands genuinely get dirty.\n\nRegistration required and caps at twelve kids; a caregiver stays. Runs most Saturdays in the growing season.',
     address: '303 Nahanton Street, Thompsonville, MA 02459',
     offset: [0.0008, 0.0012],
-    event: [4, '09:30', 1.5],
+    event: [{ days: [6], months: months(5, 9) }, '09:30', 1.5],
     recurrence: 'Most Saturdays, May–September',
     price: 'paid',
     priceMin: 15,
@@ -965,8 +1023,8 @@ const ROWS: Row[] = [
       'The harvest festival is the farm’s annual open house: hand-cranked cider pressing, wagon rides around the field, a fiercely contested pie competition, face painting, and a bluegrass trio on the barn side.\n\nSmall admission supports the farm’s education programs; kids under three are free. It sells out some years, so buy ahead.',
     address: '303 Nahanton Street, Thompsonville, MA 02459',
     offset: [0.0015, 0.0005],
-    event: [66, '11:00', 5],
-    recurrence: 'One Sunday each October',
+    event: [{ days: [0], nth: 2, months: [10] }, '11:00', 5],
+    recurrence: 'Second Sunday of October',
     price: 'paid',
     priceMin: 10,
     priceMax: 15,
@@ -1057,8 +1115,8 @@ const ROWS: Row[] = [
       'The Waban tree lighting is deliberately modest: the merchants association puts up a tree, a school chorus sings, someone hands out cocoa, and Santa arrives on a fire engine to the delight of every child present.\n\nStarts right after dusk in early December and lasts under an hour. Free, and one of the nicest small-town moments in the city.',
     address: 'Waban Square, Beacon Street, Waban, MA 02468',
     offset: [0.0008, 0.0008],
-    event: [128, '16:30', 1],
-    recurrence: 'Early December, annually',
+    event: [{ days: [6], nth: 1, months: [12] }, '16:30', 1],
+    recurrence: 'First Saturday of December',
     tags: ['holiday', 'tree lighting', 'family', 'winter', 'free'],
     rating: [4.8, 87],
   },
@@ -1139,7 +1197,7 @@ const ROWS: Row[] = [
       'Newton’s Fourth of July celebration brings a genuinely old-fashioned parade down Washington Street: scout troops, the high school band, antique fire apparatus, and a long tail of kids on decorated bicycles anyone can join.\n\nStake out curb space by 9:30. Free. The city usually pairs it with a field day and evening fireworks elsewhere in the city — check the schedule.',
     address: 'Washington Street, West Newton, MA 02465',
     offset: [0.0015, 0.0005],
-    event: [340, '10:00', 2],
+    event: [{ months: [7], date: 4 }, '10:00', 2],
     recurrence: 'Every July 4th',
     tags: ['parade', 'fourth of july', 'family', 'free', 'summer'],
     rating: [4.7, 198],
@@ -1153,8 +1211,8 @@ export const ACTIVITIES: Activity[] = ROWS.map((row, i) => {
 
   const [dLat, dLng] = row.offset ?? [0, 0];
   const priceType: PriceType = row.price ?? 'free';
-  const [startsIn, time, hours] = row.event ?? [];
-  const startAt = row.event ? inDays(startsIn!, time) : null;
+  const [rule, time, hours] = row.event ?? [];
+  const startAt = row.event ? nextOccurrence(rule!, time!) : null;
   const endAt =
     startAt && hours
       ? new Date(new Date(startAt).getTime() + hours * 3600_000).toISOString()

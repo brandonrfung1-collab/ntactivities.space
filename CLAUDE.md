@@ -172,9 +172,11 @@ submissions.
 
 Three things to know before editing:
 
-1. Event timestamps use the `inDays(n, 'HH:MM')` helper, so they are generated
-   **relative to today**. The demo never shows a calendar of past events. Do not
-   hardcode absolute dates.
+1. Event timestamps come from an `EventRule` (`days`, `months`, `nth`, `date`)
+   resolved by `nextOccurrence()` to the **next real date that fits**, in
+   Eastern time. Keep each row's rule in sync with its `recurrence` text and
+   summary, so a "Tuesday market" lands on a Tuesday and a July festival never
+   shows in October. Do not hardcode absolute dates.
 2. Rows use the compact `Row` interface and are expanded into full `Activity`
    records at the bottom of the file. Add entries in the `ROWS` array.
 3. **Images are real, verified Wikimedia Commons photos, not stock imagery.**

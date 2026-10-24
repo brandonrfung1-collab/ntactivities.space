@@ -49,7 +49,9 @@ export function formatEventWindow(startAt?: string | null, endAt?: string | null
 
   if (!endAt) return `${day} · ${time}`;
   const end = new Date(endAt);
-  const sameDay = start.toDateString() === end.toDateString();
+  // Compare Eastern calendar days: an evening event can cross midnight UTC.
+  const easternDay = (d: Date) => d.toLocaleDateString('en-US', { timeZone: 'America/New_York' });
+  const sameDay = easternDay(start) === easternDay(end);
   const endTime = end.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
