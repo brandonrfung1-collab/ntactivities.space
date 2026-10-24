@@ -108,6 +108,11 @@ interface EventRule {
   nth?: number;
   /** A fixed day of the month, e.g. 4 for the Fourth of July. */
   date?: number;
+  /**
+   * A one-off real event on this date ("YYYY-MM-DD"). It drops off the site
+   * once it has started; the other fields are ignored.
+   */
+  on?: string;
 }
 
 /** Inclusive month range, e.g. months(6, 10) → June through October. */
@@ -139,10 +144,18 @@ function easternToUtc(y: number, m: number, d: number, h: number, min: number): 
   return guess;
 }
 
-/** ISO start of the next occurrence of `rule` at `time` (Eastern) that has not started yet. */
-function nextOccurrence(rule: EventRule, time: string): string {
+/**
+ * ISO start of the next occurrence of `rule` at `time` (Eastern) that has not
+ * started yet, or null for a one-off event that is already over.
+ */
+function nextOccurrence(rule: EventRule, time: string): string | null {
   const [h, min] = time.split(':').map(Number);
   const now = Date.now();
+  if (rule.on) {
+    const [y, m, d] = rule.on.split('-').map(Number);
+    const start = easternToUtc(y, m, d, h, min);
+    return start >= now ? new Date(start).toISOString() : null;
+  }
   const today = new Date(easternWallClock(now));
   for (let offset = 0; offset < 800; offset++) {
     const day = new Date(
@@ -777,13 +790,13 @@ const ROWS: Row[] = [
   },
   {
     title: 'Newtonville Books',
-    village: 'newtonville',
+    village: 'newton-centre',
     category: 'shopping',
     summary:
       'A beloved independent bookstore with a serious author-event calendar and excellent staff picks.',
     description:
       'Newtonville Books is the kind of independent shop that anchors a neighborhood: tightly curated fiction, a strong kids’ section, and staff recommendation cards that are actually worth reading.\n\nThe author-event series punches well above the store’s size — nationally touring novelists read here regularly. Events are usually free with a book purchase; check the calendar and RSVP.',
-    address: '10 Langley Road, Newtonville, MA 02460',
+    address: '10 Langley Road, Newton Centre, MA 02459',
     offset: [-0.0015, 0.0015],
     price: 'varies',
     recurrence: 'Daily, 10am–7pm',
@@ -1202,10 +1215,137 @@ const ROWS: Row[] = [
     tags: ['parade', 'fourth of july', 'family', 'free', 'summer'],
     rating: [4.7, 198],
   },
+
+  // ─── Real dated events (fall 2026) ─────────────────────────────────────────
+  // Taken from the venues' own published calendars. `on` events drop off the
+  // site automatically once they have started; replace them as the season moves.
+  {
+    title: 'Free First Sunday at the Jackson Homestead',
+    village: 'newton-corner',
+    category: 'arts-culture',
+    summary:
+      'Free admission to Newton’s history museum, a documented Underground Railroad stop, on the first Sunday of every month.',
+    description:
+      'The Jackson Homestead and Museum is a Federal-style 1809 farmhouse that the Jackson family opened to freedom seekers on the Underground Railroad. Today it holds Historic Newton’s permanent and rotating exhibits on the city’s past.\n\nAdmission is free on the first weekend of each month. Allow about an hour, and pair it with a walk around Farlow Park a few blocks away.',
+    address: '527 Washington Street, Newton, MA 02458',
+    offset: [0.001, -0.003],
+    event: [{ days: [0], nth: 1 }, '10:00', 7],
+    recurrence: 'First Sunday of every month',
+    website: 'https://www.newtonma.gov/government/historic-newton',
+    tags: ['history', 'museum', 'underground railroad', 'free', 'rainy day'],
+    featured: true,
+  },
+  {
+    title: 'Free First Saturday at the Durant-Kenrick House',
+    village: 'newton-corner',
+    category: 'family-kids',
+    summary:
+      'Free entry to a 1734 farmhouse museum with hands-on history puzzles and family activities, the first Saturday of every month.',
+    description:
+      'The Durant-Kenrick House and Grounds is one of Newton’s oldest homes, restored by Historic Newton as a museum of everyday colonial and early American life. Exhibits are built for families, with puzzles and hands-on activities for kids.\n\nFree on the first weekend of each month. The grounds are a pleasant stop on their own.',
+    address: '286 Waverley Avenue, Newton, MA 02458',
+    offset: [0.004, -0.002],
+    event: [{ days: [6], nth: 1 }, '10:00', 7],
+    recurrence: 'First Saturday of every month',
+    website: 'https://newtonma.gov/government/historic-newton/visit-museum/durant-kenrick-house-and-grounds',
+    tags: ['history', 'museum', 'family', 'free'],
+    featured: true,
+  },
+  {
+    title: 'Artist Talk with Gene Mackles at the Allen Center',
+    village: 'west-newton',
+    category: 'arts-culture',
+    summary:
+      'Painter Gene Mackles talks about his oil paintings of Newton landscapes, with refreshments in the galleries.',
+    description:
+      'Gene Mackles discusses his work, inspiration and process alongside his exhibition in the Allen Center galleries, where many of the paintings show local Newton scenes. Light refreshments follow.\n\nFree, but registration is requested through the Newton Cultural Alliance. The exhibition itself is on view through November 8.',
+    address: '35 Webster Street, West Newton, MA 02465',
+    offset: [-0.002, 0.001],
+    event: [{ on: '2026-10-29' }, '19:00', 1.5],
+    website: 'https://newtonculture.org/upcomingevents/',
+    tags: ['art', 'talk', 'gallery', 'free', 'registration'],
+    featured: true,
+  },
+  {
+    title: 'Yael Schonbrun with Lindsay Gibson at Newtonville Books',
+    village: 'newton-centre',
+    category: 'arts-culture',
+    summary:
+      'Psychologist Yael Schonbrun on “Why Don’t You Understand Me?”, the science of connecting when signals get missed.',
+    description:
+      'Clinical psychologist Yael Schonbrun, PhD, talks with author Lindsay Gibson about her new book on why the people closest to us so often misread us, and what actually helps.\n\nAn evening author event at Newtonville Books. Check the store’s calendar for tickets and RSVP.',
+    address: '10 Langley Road, Newton Centre, MA 02459',
+    offset: [-0.0015, 0.0018],
+    event: [{ on: '2026-10-27' }, '19:00', 1],
+    price: 'varies',
+    website: 'https://newtonvillebooks.com/events/list/upcoming-events',
+    tags: ['author talk', 'books', 'psychology'],
+  },
+  {
+    title: 'Carol LaHines with Rick Moody',
+    village: 'newton-centre',
+    category: 'arts-culture',
+    summary:
+      'Novelist Carol LaHines discusses “Miracle Grow of the Mind” with Rick Moody, author of “The Ice Storm”.',
+    description:
+      'A Newtonville Books author evening: Carol LaHines talks about her new novel with Rick Moody, whose “The Ice Storm” became the Ang Lee film.\n\nCheck the store’s calendar for the venue, tickets and RSVP.',
+    address: '10 Langley Road, Newton Centre, MA 02459',
+    offset: [-0.0016, 0.0016],
+    event: [{ on: '2026-10-29' }, '19:00', 1],
+    price: 'varies',
+    website: 'https://newtonvillebooks.com/events/list/upcoming-events',
+    tags: ['author talk', 'books', 'fiction'],
+  },
+  {
+    title: 'Giving Thanks: Foodie Picture Books & Crafts',
+    village: 'newton-centre',
+    category: 'family-kids',
+    summary:
+      'Picture-book authors Kathy Choi and Mia Wenjen read food stories, then kids make a Korean wrapping-cloth craft.',
+    description:
+      'A Thanksgiving-season story hour from Newtonville Books: authors Kathy Choi and Mia Wenjen read their food-themed picture books, and Choi leads a bojagi (Korean wrapping cloth) craft.\n\nA good Saturday-morning outing for young readers. Check the store’s calendar for details.',
+    address: '10 Langley Road, Newton Centre, MA 02459',
+    offset: [-0.0014, 0.0017],
+    event: [{ on: '2026-11-07' }, '11:00', 2],
+    price: 'varies',
+    website: 'https://newtonvillebooks.com/events/list/upcoming-events',
+    tags: ['story time', 'crafts', 'thanksgiving', 'kids'],
+  },
+  {
+    title: 'M. T. Anderson Presents “Stealing Saint Nick”',
+    village: 'newton-centre',
+    category: 'arts-culture',
+    summary:
+      'National Book Award winner M. T. Anderson on the real medieval theft of Saint Nicholas’s bones, just in time for the holidays.',
+    description:
+      'M. T. Anderson, the National Book Award–winning author of “Octavian Nothing” and “Feed”, tells the strange true story of how Saint Nicholas’s body was stolen, and how legends like Santa Claus grow out of stories like it.\n\nOne of the bigger author nights of the season at Newtonville Books. Check the store’s calendar for tickets.',
+    address: '10 Langley Road, Newton Centre, MA 02459',
+    offset: [-0.0017, 0.0014],
+    event: [{ on: '2026-11-20' }, '19:00', 1],
+    price: 'varies',
+    website: 'https://newtonvillebooks.com/events/list/upcoming-events',
+    tags: ['author talk', 'books', 'history', 'holidays'],
+    featured: true,
+  },
+  {
+    title: 'Mandy Silverman on Challah, Babka & Twisted Breads',
+    village: 'newton-centre',
+    category: 'food-drink',
+    summary:
+      'Baker Mandy Silverman presents “Twisted”, her guide to braided challah, babka and other twisted breads.',
+    description:
+      'Mandy Silverman talks shaping, braiding and baking with her new book “Twisted”, a hands-on guide to challah, babka and other twisted breads. Perfect timing for holiday baking.\n\nAn evening event at Newtonville Books. Check the store’s calendar for tickets.',
+    address: '10 Langley Road, Newton Centre, MA 02459',
+    offset: [-0.0013, 0.0015],
+    event: [{ on: '2026-12-02' }, '19:00', 1],
+    price: 'varies',
+    website: 'https://newtonvillebooks.com/events/list/upcoming-events',
+    tags: ['author talk', 'baking', 'holidays'],
+  },
 ];
 
 /** Expand the compact rows into full Activity records. */
-export const ACTIVITIES: Activity[] = ROWS.map((row, i) => {
+export const ACTIVITIES: Activity[] = ROWS.flatMap((row, i) => {
   const village = VILLAGE_BY_SLUG.get(row.village);
   if (!village) throw new Error(`Unknown village slug in seed data: ${row.village}`);
 
@@ -1213,6 +1353,8 @@ export const ACTIVITIES: Activity[] = ROWS.map((row, i) => {
   const priceType: PriceType = row.price ?? 'free';
   const [rule, time, hours] = row.event ?? [];
   const startAt = row.event ? nextOccurrence(rule!, time!) : null;
+  // A one-off event that has already happened is dropped entirely.
+  if (row.event && !startAt) return [];
   const endAt =
     startAt && hours
       ? new Date(new Date(startAt).getTime() + hours * 3600_000).toISOString()

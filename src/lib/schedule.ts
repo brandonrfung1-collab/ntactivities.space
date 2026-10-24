@@ -280,3 +280,26 @@ export function getAvailabilityBadge(activity: Activity, now: Date = new Date())
   }
   return null;
 }
+
+/** How far ahead a dated event still counts as "happening now" for ranking. */
+const IN_SEASON_DAYS = 45;
+
+/**
+ * True when an activity is worth doing right now: a dated event starting in
+ * the next few weeks, or a place whose season window (e.g. "June–October",
+ * "December–March", "through Labor Day") includes the current month. Used to
+ * rank off-season listings (a July festival, the sledding hill in summer)
+ * below what is actually happening.
+ */
+export function isInSeason(activity: Activity, now: Date = new Date()): boolean {
+  if (activity.isEvent) {
+    if (!activity.startAt) return false;
+    const start = new Date(activity.startAt).getTime();
+    return start - now.getTime() <= IN_SEASON_DAYS * 86_400_000;
+  }
+  if (!activity.recurrence) return true;
+  const text = dashNormalize(activity.recurrence)
+    .replace(/\b(?:mid|early|late)[-\s]+/gi, '')
+    .replace(/labor day/i, 'September');
+  return stripMonthRange(text, nyParts(now).month).inSeason;
+}

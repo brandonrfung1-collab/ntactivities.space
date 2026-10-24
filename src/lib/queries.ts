@@ -5,7 +5,7 @@ import { ACTIVITIES } from '@/lib/data/activities';
 import { CATEGORY_BY_SLUG } from '@/lib/data/categories';
 import { VILLAGE_BY_SLUG } from '@/lib/data/villages';
 import { distanceMiles } from '@/lib/utils';
-import { getAvailabilityBadge } from '@/lib/schedule';
+import { getAvailabilityBadge, isInSeason } from '@/lib/schedule';
 import { createClient } from '@/lib/supabase/server';
 import { getVisitorId } from '@/lib/visitor';
 import { buildSlotCounts, emptySummary, getRsvpSlots, type RsvpSummary } from '@/lib/rsvp';
@@ -140,13 +140,22 @@ export function applyFilters(input: Activity[], f: ActivityFilters): Activity[] 
         break;
       }
     // falls through to recommended when we have no origin
-    default:
-      // "Recommended": featured first, then best-rated with enough reviews.
+    default: {
+      // "Recommended": what's in season right now first, then featured, then
+      // events happening in the next two weeks, then best-rated with enough
+      // reviews.
+      const now = new Date();
+      const season = new Map(sorted.map((a) => [a.id, isInSeason(a, now)]));
+      const soon = (a: Activity) =>
+        Boolean(a.startAt) && new Date(a.startAt!).getTime() - now.getTime() <= 14 * 86_400_000;
       sorted.sort(
         (a, b) =>
+          Number(season.get(b.id)) - Number(season.get(a.id)) ||
           Number(b.featured) - Number(a.featured) ||
-          b.ratingAvg * Math.log1p(b.ratingCount) - a.ratingAvg * Math.log1p(a.ratingCount),
+          Number(soon(b)) - Number(soon(a)) ||
+          popularity(b) - popularity(a),
       );
+    }
   }
 
   return f.limit ? sorted.slice(0, f.limit) : sorted;
@@ -161,19 +170,35 @@ export async function getActivityBySlug(slug: string): Promise<Activity | null> 
   return all.find((a) => a.slug === slug) ?? null;
 }
 
+/** Rating weighted by review count, so a 4.9 from 400 people beats a 5.0 from 3. */
+function popularity(a: Activity): number {
+  return a.ratingAvg * Math.log1p(a.ratingCount);
+}
+
+/** The homepage rail: the most appealing things that are in season right now. */
 export async function getFeaturedActivities(limit = 8): Promise<Activity[]> {
   const all = await loadAll();
-  const featured = all.filter((a) => a.featured);
-  const pool = featured.length >= limit ? featured : all;
+  const now = new Date();
+  const inSeason = all.filter((a) => isInSeason(a, now));
+  const pool = inSeason.length >= limit ? inSeason : all;
   return applyFilters(pool, { sort: 'recommended', limit });
 }
 
-/** Upcoming dated events, soonest first. */
+/**
+ * The best upcoming events in the next few weeks (featured, then most
+ * popular), shown in date order. Falls back to plain soonest-first when the
+ * near-term calendar is thin.
+ */
 export async function getUpcomingEvents(limit = 6): Promise<Activity[]> {
   const all = await loadAll();
   const now = Date.now();
   const upcoming = all.filter((a) => a.isEvent && a.startAt && new Date(a.startAt).getTime() >= now);
-  return applyFilters(upcoming, { sort: 'soonest', limit });
+  const soon = upcoming.filter((a) => new Date(a.startAt!).getTime() - now <= 21 * 86_400_000);
+  if (soon.length < limit) return applyFilters(upcoming, { sort: 'soonest', limit });
+  const best = [...soon]
+    .sort((a, b) => Number(b.featured) - Number(a.featured) || popularity(b) - popularity(a))
+    .slice(0, limit);
+  return applyFilters(best, { sort: 'soonest' });
 }
 
 /** Other things to do nearby, excluding the current activity. */

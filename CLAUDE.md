@@ -163,8 +163,9 @@ When adding a table: enable RLS and write policies in the same migration.
 
 ## Seed data
 
-`src/lib/data/activities.ts` holds **64 activities — 5 per village, except
-Auburndale (4)**, across all 8 categories. Landmarks are real Newton fixtures
+`src/lib/data/activities.ts` holds the sample listings (about 5 per village)
+across all 8 categories, plus a block of **real dated events** taken from venue
+calendars (Newtonville Books, the Allen Center, Historic Newton). Landmarks are real Newton fixtures
 (Crystal Lake, Echo Bridge, Hemlock Gorge, Nahanton Park, Newton Community
 Farm, West Newton Cinema, the Nonantum Festa…). **Hours, prices and specific
 event times are illustrative sample data** meant to be replaced by real
@@ -176,7 +177,12 @@ Three things to know before editing:
    resolved by `nextOccurrence()` to the **next real date that fits**, in
    Eastern time. Keep each row's rule in sync with its `recurrence` text and
    summary, so a "Tuesday market" lands on a Tuesday and a July festival never
-   shows in October. Do not hardcode absolute dates.
+   shows in October. Only a real one-off event uses `{ on: 'YYYY-MM-DD' }`;
+   it drops off the site automatically once it starts, so refresh that block
+   with the next season's real events.
+   Ranking (`recommended` sort, homepage rail): in season now (`isInSeason`
+   in `lib/schedule.ts`) → featured → event in the next two weeks → rating
+   weighted by review count.
 2. Rows use the compact `Row` interface and are expanded into full `Activity`
    records at the bottom of the file. Add entries in the `ROWS` array.
 3. **Images are real, verified Wikimedia Commons photos, not stock imagery.**
